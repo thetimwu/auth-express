@@ -1,7 +1,9 @@
-//jshint esversion:6
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
+const encrypt = require("mongoose-encryption");
+const crypto = require("crypto");
 
 const ejs = require("ejs");
 
@@ -14,10 +16,32 @@ mongoose.connect("mongodb://localhost:27017/userDB", {
   useUnifiedTopology: true
 });
 
-const userSchema = {
-  name: String,
+const userSchema = new mongoose.Schema({
+  email: String,
   password: String
-};
+});
+
+// //32 bytes
+// let key32 = require("crypto").randomBytes(32, function(err, buffer) {
+//   var token = buffer.toString("base64");
+// });
+
+// // 64 bytes
+// let key64 = require("crypto").randomBytes(64, function(err, buffer) {
+//   var token = buffer.toString("base64");
+// });
+
+var encKey = process.env.SOME_32BYTE_BASE64_STRING;
+var sigKey = process.env.SOME_64BYTE_BASE64_STRING;
+
+userSchema.plugin(encrypt, {
+  encryptionKey: encKey,
+  signingKey: sigKey,
+  encryptedFields: ["password"]
+});
+
+// const secret = "thisissecret.blublu";
+// userSchema.plugin(encrypt, { secret: secret, encryptedFields: ["password"] });
 
 const User = new mongoose.model("User", userSchema);
 
@@ -44,6 +68,22 @@ app.post("/register", (req, res) => {
       console.log(err);
     } else {
       res.render("secrets");
+    }
+  });
+});
+
+app.post("/login", (req, res) => {
+  const userName = req.body.email;
+  const password = req.body.password;
+
+  User.findOne({ email: userName }, (err, foundOne) => {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("psw: " + foundOne.password);
+      // if (foundOne.password === password) {
+      //   res.render("secrets");
+      // }
     }
   });
 });
